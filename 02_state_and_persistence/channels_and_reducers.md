@@ -204,6 +204,16 @@ Resorting to a "pick one of two" reducer often hides a genuine modelling problem
 
 **Answer:**
 
-A node is scheduled for the next superstep if **any of its read channels were updated** in the current superstep, and there is an edge (static or conditional) leading to it. This is the **subscription** model from Pregel: nodes are activated by data availability, not just by static topology.
+In a `StateGraph`, a node is triggered by its **incoming edges**, not by the state keys it reads. When the graph compiles, every node gets one trigger channel, `branch:to:<node>`, and each edge into it becomes a write to that channel:
 
-Combined with conditional edges, this means a node may sit idle for many supersteps and re-activate only when relevant state changes — useful for long-running agents that occasionally invoke specialised reviewers.
+- a plain edge `add_edge("a", "b")`: when `a` finishes, it writes `branch:to:b`, so `b` runs in the next superstep;
+- a conditional edge: the router's return value decides which `branch:to:*` channels are written;
+- a join `add_edge(["a", "b"], "c")`: a barrier channel `join:a+b:c` that fires only once both `a` and `b` have run (possibly in different supersteps);
+- `Send("node", arg)`: a separate "push" task with `arg` as its input, one per `Send`.
+
+Updating a state key that a node reads does **not** schedule that node. Two consequences that catch people out:
+
+- Two plain edges into one node (`a → e`, `c → e`) that fire in different supersteps run `e` **twice**; use a join (`add_edge([...], "e")`) to wait for both.
+- A node that reads a key but has no edge from the node that wrote it is not woken by the write, however relevant the update.
+
+The underlying Pregel engine does support data-driven subscription (a node with a state channel among its `triggers`), which is why the model is often described that way; `StateGraph` simply never wires state channels in as triggers. Checked against the LangGraph 1.2.14 source (`StateGraph.attach_node` / `attach_edge` in `langgraph/graph/state.py`).

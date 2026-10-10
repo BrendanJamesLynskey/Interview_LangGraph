@@ -232,13 +232,21 @@ Items in the store are namespaced tuples, which makes per-user / per-org isolati
 
 ---
 
-### Q15. What is the `checkpoint_during=False` option for, and when do you use it?
+### Q15. What is the `durability` option for, and when do you use it?
 
 **Answer:**
 
-By default the checkpointer writes after **every superstep**. Setting `checkpoint_during=False` on `invoke`/`stream` skips intermediate writes and only persists the **final state**. Use it when:
+`durability` (on `invoke` / `stream`) controls **when** checkpoints are written. In LangGraph 1.x it replaces the older `checkpoint_during` flag, which is deprecated (`checkpoint_during=True` maps to `"async"`, `False` to `"exit"`, and passing both raises an error):
+
+| Mode | When the checkpoint is written |
+|------|--------------------------------|
+| `"sync"` | after every superstep, before the next one starts (safest, slowest) |
+| `"async"` (default) | after every superstep, while the next one is already running |
+| `"exit"` | only when the run exits: on completion, an interrupt or an error |
+
+Use `"exit"` when:
 
 - The graph runs as a single atomic batch where partial replay is undesirable.
 - You want to reduce write amplification on a high-throughput pipeline.
 
-The trade-off: no time travel within that run, and a crash mid-execution loses all progress.
+The trade-off: the thread keeps only the final checkpoint of that run, so there is no time travel within it. A node that raises is still saved on exit (you can resume from the failed step), but a hard process crash mid-run loses all of that run's progress. Use `"sync"` when every superstep must be durable before the next begins (long, expensive runs on infrastructure that can die). Checked against LangGraph 1.2.14 (`Durability` in `langgraph/types.py`, the deprecation in `pregel/main.py`).

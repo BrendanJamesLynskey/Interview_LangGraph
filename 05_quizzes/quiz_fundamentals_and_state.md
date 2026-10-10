@@ -126,11 +126,11 @@ A `ValidationError` is raised immediately during channel merge, before the parti
 
 ---
 
-### Q16. Why might you set `checkpoint_during=False` on `invoke`?
+### Q16. Why might you set `durability="exit"` on `invoke`?
 
 **Answer:**
 
-To skip intermediate per-superstep writes and only persist the final state. Reduces storage I/O for high-throughput pipelines but loses time-travel resolution within that run.
+To skip the per-superstep checkpoint writes and persist only when the run exits (on completion, an interrupt or an error). Reduces storage I/O for high-throughput pipelines but loses time-travel resolution within that run, and a hard process crash loses the run's progress. (`durability` replaces the deprecated `checkpoint_during=False` in LangGraph 1.x; the default is `"async"`.)
 
 ---
 
