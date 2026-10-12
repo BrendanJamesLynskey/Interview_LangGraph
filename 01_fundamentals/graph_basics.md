@@ -175,11 +175,13 @@ This model gives deterministic semantics for parallelism: a node always sees a c
 
 **Answer:**
 
-The recursion limit caps the number of **supersteps** a single invocation can execute, defaulting to **25**. It guards against infinite loops in cyclic graphs (an agent that keeps calling tools without ever reaching `END`).
+The recursion limit caps the number of **supersteps** a single invocation can execute. It guards against infinite loops in cyclic graphs (an agent that keeps calling tools without ever reaching `END`).
 
 ```python
 graph.invoke({"messages": [...]}, {"recursion_limit": 50})
 ```
+
+The default has changed between releases: it was **25** in LangGraph 0.x, and in 1.2.14 it is **10007** (measured; set in `langgraph/_internal/_config.py` and overridable with the `LANGGRAPH_DEFAULT_RECURSION_LIMIT` environment variable), although some docs still say 1000. Set it explicitly instead of relying on the default.
 
 Hitting the limit raises `GraphRecursionError`. For long-running agents, raise the limit deliberately rather than disabling the check — and consider whether the agent's halting condition is correct.
 

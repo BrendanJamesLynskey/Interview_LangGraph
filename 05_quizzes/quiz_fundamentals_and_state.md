@@ -66,7 +66,7 @@ One iteration of the Pregel-style execution loop: all currently scheduled nodes 
 
 **Answer:**
 
-It caps the number of **supersteps** in a single invocation (default 25), guarding against infinite cyclic loops in agentic graphs. Hitting the limit raises `GraphRecursionError`.
+It caps the number of **supersteps** in a single invocation (default 25 in LangGraph 0.x, 10007 in 1.2.14; set it explicitly), guarding against infinite cyclic loops in agentic graphs. Hitting the limit raises `GraphRecursionError`.
 
 ---
 

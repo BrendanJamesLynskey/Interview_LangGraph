@@ -172,9 +172,12 @@ Each `Send` triggers an independent run of the worker subgraph, with its own int
 
 **Answer:**
 
-By default the entire superstep fails — sibling workers may have completed but their writes are discarded; the parent graph raises the error.
+The superstep fails and the parent graph raises the error. What happens to the siblings depends on the checkpointer:
 
-For partial-failure tolerance, wrap each worker's body in try/except and return an error marker:
+- **Without a checkpointer**, the run is simply lost, including the siblings' results.
+- **With a checkpointer**, the writes of the workers that finished are kept as *pending writes* on the last checkpoint. Resuming the thread (`graph.invoke(None, config)`) re-runs **only the failed worker**; the siblings are not called again. Checked against LangGraph 1.2.14: fan out to items 1, 2, 3 with item 2 raising, then resume, and only item 2 runs again, giving `out == [1, 2, 3]`.
+
+To let the reduce step carry on despite failures, wrap each worker's body in try/except and return an error marker:
 
 ```python
 def worker(payload):
